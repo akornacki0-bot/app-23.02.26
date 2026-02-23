@@ -39,19 +39,41 @@ function rotatePlan(fi) {
     render(); 
 }
 
-function addDot(e, fi) {
-    if (!state.floors[fi].plan) return uploadImg('plan', fi);
-    const r = e.currentTarget.getBoundingClientRect();
-    const di = state.floors[fi].defects.length;
-    state.floors[fi].defects.push({ 
-        x: ((e.clientX - r.left)/r.width)*100, 
-        y: ((e.clientY - r.top)/r.height)*100, 
-        desc: '', norm: '', status: 'to_discuss', img: '' 
-    });
-    render(); 
-    openModal(fi, di);
+function uploadImg(type, fi, di) {
+    const input = document.createElement('input'); 
+    input.type = 'file'; 
+    input.accept = 'image/*';
+    input.onchange = e => {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            if(type==='plan') state.floors[fi].plan = ev.target.result;
+            else if(type==='report') {
+                state.floors[fi].defects[di].img = ev.target.result;
+            }
+            render();
+        };
+        reader.readAsDataURL(file);
+    };
+    input.click();
 }
 
+function addDot(e, fi) {
+    // Jeśli nie ma rzutu, najpierw go wgraj
+    if (!state.floors[fi].plan) return uploadImg('plan', fi);
+    
+    const r = e.currentTarget.getBoundingClientRect();
+    const di = state.floors[fi].defects.length;
+    state.floors[fi].defects.push({
+        x: ((e.clientX - r.left)/r.width)*100,
+        y: ((e.clientY - r.top)/r.height)*100,
+        desc: "",
+        img: "" // Miejsce na zdjęcie usterki
+    });
+    render();
+    openModal(fi, di); // Otwórz okno edycji od razu po dodaniu
+}
 // MODAL
 function openModal(fi, di) {
     active = { f: fi, d: di }; 
