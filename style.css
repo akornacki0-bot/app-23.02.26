@@ -166,3 +166,21 @@ input[oninput]:focus { outline: none; border-bottom: 2px solid var(--accent); ba
     .toolbar { flex-direction: column; height: auto; padding: 10px; gap: 10px; }
     #modal { width: 95%; }
 }
+
+.main-img-box, .q-photo {
+    width: 100%;
+    min-height: 200px; /* Rezerwuje miejsce */
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed #ccc;
+    margin-top: 10px;
+}
+
+.main-img-box img, .q-photo img {
+    max-width: 100%;
+    max-height: 400px; /* Lub inna wysokość pasująca do A4 */
+    object-fit: contain;
+    display: block;
+}
