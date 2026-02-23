@@ -276,4 +276,26 @@ window.onload = function() {
     }
 };
 
+function clearAllData() {
+    if (confirm("CZY NA PEWNO WYCZYŚCIĆ WSZYSTKO? Stracisz wszystkie niezapisane do pliku dane i zdjęcia!")) {
+        // Reset stanu do wartości początkowych
+        state = {
+            meta: { inv:'', cli:'', adr:'', date:'', auth:'', tel:'', mail:'' },
+            logo: '',
+            mainImg: '',
+            floors: []
+        };
+        
+        // Usunięcie kopii z pamięci przeglądarki
+        localStorage.removeItem('inspekcja_backup');
+        
+        // Dodanie pierwszej pustej kondygnacji i odświeżenie widoku
+        addFloor();
+        render();
+        
+        alert("Pamięć została wyczyszczona.");
+    }
+}
+
 render();
+
