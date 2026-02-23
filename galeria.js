@@ -38,70 +38,69 @@ function importData(e) {
     const reader = new FileReader();
     reader.onload = ev => {
         try {
-            const rawData = JSON.parse(ev.target.result);
-            console.log("Próba wczytania:", rawData);
+            const data = JSON.parse(ev.target.result);
+            console.log("DEBUG: Surowe dane:", data);
 
-            // 1. Znajdź główny obiekt (często dane są w rawData.project lub rawData.data)
-            const data = rawData.state || rawData.data || rawData.project || rawData;
-
-            // 2. Import Meta
+            // 1. Dane nagłówkowe (Meta)
             state.meta = data.meta || data.header || state.meta;
             state.logo = data.logo || '';
-            state.mainImg = data.mainImg || '';
+            state.mainImg = data.mainImg || data.coverImg || '';
 
-            // 3. GŁĘBOKIE SZUKANIE KONDYGNACJI
-            let foundFloors = data.floors || data.levels || data.pages || [];
+            // 2. Import Kondygnacji
+            let rawFloors = data.floors || data.levels || data.pages || [];
             
-            // Jeśli nie znaleźliśmy tablicy kondygnacji, szukamy jej głębiej
-            if (foundFloors.length === 0 && data.project && data.project.floors) {
-                foundFloors = data.project.floors;
+            if (rawFloors.length === 0) {
+                // Jeśli nie ma tablicy floors, tworzymy sztuczną na podstawie tego co jest
+                state.floors = [{ name: 'KONDYGNACJA 1', plan: data.plan || '', defects: [] }];
+            } else {
+                state.floors = rawFloors.map(f => ({
+                    name: f.name || f.title || 'Kondygnacja',
+                    plan: f.plan || f.image || f.rzut || '',
+                    defects: [] // Na razie pusta lista, wypełnimy ją niżej
+                }));
             }
 
-            if (foundFloors.length > 0) {
-                state.floors = foundFloors.map(f => {
-                    // Szukamy usterek pod każdą możliwą nazwą
-                    const rawDefects = f.defects || f.points || f.items || f.reports || f.usterki || [];
-                    
-                    return {
-                        name: f.name || f.title || "Kondygnacja",
-                        plan: f.plan || f.image || f.rzut || '',
-                        rotation: f.rotation || 0,
-                        defects: rawDefects.map(d => ({
-                            x: parseFloat(d.x) || 0,
-                            y: parseFloat(d.y) || 0,
-                            desc: d.desc || d.description || d.opis || d.text || '',
-                            norm: d.norm || d.law || d.norma || '',
-                            status: d.status || 'to_discuss',
-                            img: d.img || d.photo || d.zdjecie || ''
-                        }))
-                    };
-                });
-            } else {
-                // Jeśli plik nie ma struktury kondygnacji, ale ma usterki (płaska struktura)
-                const flatDefects = data.defects || data.points || rawData.defects || [];
-                if (flatDefects.length > 0) {
-                    state.floors = [{
-                        name: "Importowane Dane",
-                        plan: data.plan || data.mainImg || '',
-                        defects: flatDefects.map(d => ({
-                            x: parseFloat(d.x) || 0,
-                            y: parseFloat(d.y) || 0,
-                            desc: d.desc || d.description || '',
-                            norm: d.norm || '',
-                            status: d.status || 'to_discuss',
-                            img: d.img || d.photo || ''
-                        }))
-                    }];
+            // 3. AGRESYWNE SZUKANIE USTEREK (Odkurzacz)
+            state.floors.forEach((floor, index) => {
+                // Szukamy wewnątrz obiektu kondygnacji f (z surowych danych)
+                let source = rawFloors[index] || data; 
+                let foundDefects = source.defects || source.points || source.items || source.usterki || [];
+
+                // Jeśli usterki są zapisane jako obiekt a nie tablica, zamień na tablicę
+                if (!Array.isArray(foundDefects)) {
+                    foundDefects = Object.values(foundDefects);
                 }
+
+                floor.defects = foundDefects.map(d => ({
+                    x: parseFloat(d.x) || 0,
+                    y: parseFloat(d.y) || 0,
+                    desc: d.desc || d.description || d.opis || '',
+                    norm: d.norm || d.law || d.norma || '',
+                    status: d.status || 'to_discuss',
+                    img: d.img || d.photo || d.zdjecie || ''
+                }));
+            });
+
+            // 4. RATUNEK: Jeśli po wszystkim nadal 0 usterek, a w pliku są "globalne" punkty
+            const globalDefects = data.defects || data.points || data.all_points || [];
+            if (state.floors[0].defects.length === 0 && globalDefects.length > 0) {
+                console.log("DEBUG: Znaleziono punkty globalne, przypisuję do 1. rzutu");
+                state.floors[0].defects = globalDefects.map(d => ({
+                    x: parseFloat(d.x) || 0,
+                    y: parseFloat(d.y) || 0,
+                    desc: d.desc || d.description || '',
+                    norm: d.norm || '',
+                    status: d.status || 'to_discuss',
+                    img: d.img || d.photo || ''
+                }));
             }
 
             render();
-            const total = state.floors.reduce((acc, f) => acc + f.defects.length, 0);
-            alert(`ANALIZA PLIKU ZAKOŃCZONA\nKondygnacje: ${state.floors.length}\nZnalezione usterki: ${total}`);
-            
+            alert("SUKCES!\nKondygnacje: " + state.floors.length + "\nUsterki: " + state.floors.reduce((a,b)=>a+b.defects.length, 0));
+
         } catch (err) {
-            alert("Błąd: Przeglądarka nie może odczytać tego pliku.");
-            console.error(err);
+            console.error("BŁĄD IMPORTU:", err);
+            alert("Błąd krytyczny: " + err.message);
         }
     };
     reader.readAsText(file);
@@ -264,4 +263,5 @@ function render() {
 // Inicjalizacja
 if(state.floors.length === 0) addFloor();
 render();
+
 
