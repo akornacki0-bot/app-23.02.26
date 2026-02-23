@@ -48,49 +48,53 @@ function importData(e) {
     reader.onload = ev => {
         try {
             const data = JSON.parse(ev.target.result);
+            
+            // 1. Metadane
             state.meta = data.meta || state.meta;
             state.logo = data.logo || '';
             state.mainImg = data.mainImg || '';
 
-            let rawPoints = data.defects || data.points || data.items || [];
+            // 2. Obsługa struktury (Wiele kondygnacji vs Jeden rzut)
             let rawFloors = data.floors || data.levels || [];
 
             if (rawFloors.length > 0) {
                 state.floors = rawFloors.map(f => ({
                     name: f.name || "Kondygnacja",
                     plan: f.plan || f.image || '',
-                    defects: (f.defects || []).map(d => ({
+                    defects: (f.defects || f.points || []).map(d => ({
                         x: parseFloat(d.x) || 0,
                         y: parseFloat(d.y) || 0,
                         desc: d.desc || d.description || '',
                         norm: d.norm || '',
                         status: d.status || 'to_discuss',
-                        img: d.img || d.photo || ''
+                        img: d.img || d.photo || d.image || d.src || '' // SZUKANIE ZDJĘCIA
                     }))
                 }));
             } else {
-                // Jeśli plik to pojedynczy rzut
+                // KLUCZOWA POPRAWKA: Mapowanie z 'data' zamiast 'f'
                 state.floors = [{
                     name: "RZUT GŁÓWNY",
-                    plan: data.plan || data.mainImg || '', 
-                    // NAPRAWIONO: Zmieniono 'f.defects' na 'data.defects' (lub inne klucze)
+                    plan: data.plan || data.mainImg || '',
                     defects: (data.defects || data.points || data.items || []).map(d => ({
                         x: parseFloat(d.x) || 0,
                         y: parseFloat(d.y) || 0,
                         desc: d.desc || d.description || '',
                         norm: d.norm || '',
                         status: d.status || 'to_discuss',
-                        img: d.img || d.photo || d.image || d.src || '' 
+                        img: d.img || d.photo || d.image || d.src || '' // SZUKANIE ZDJĘCIA
                     }))
                 }];
             }
 
-            saveToLocal(); // Zapisujemy po imporcie
+            saveToLocal();
             render();
+            
             const count = state.floors.reduce((a, b) => a + b.defects.length, 0);
-            alert("Wczytano pomyślnie!\nKondygnacji: " + state.floors.length + "\nZnalezionych usterek: " + count);
+            alert("Wczytano pomyślnie!\nLiczba usterek: " + count);
+
         } catch (err) {
-            alert("Błąd: Plik ma nieprawidłowy format.");
+            console.error("Błąd importu:", err);
+            alert("Błąd: Nie udało się przetworzyć pliku JSON.");
         }
     };
     reader.readAsText(file);
@@ -300,6 +304,7 @@ function clearAllData() {
 }
 
 render();
+
 
 
 
