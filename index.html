@@ -9,11 +9,12 @@
 <body>
 
 <div class="toolbar no-print">
-    <div id="stats-box"></div>
+    <div id="stats-box" style="font-size:12px; margin-right:25px; font-weight:600"></div>
     <div class="button-group">
-        <button class="btn btn-add" onclick="addFloor()">+ Kondygnacja</button>
-        <button class="btn btn-save" onclick="exportData()">Zapisz</button>
-        <button class="btn btn-load" onclick="document.getElementById('import-file').click()">Wczytaj</button>
+        <button class="btn" style="background:#27ae60" onclick="addFloor()">+ Kondygnacja</button>
+        <button class="btn" style="background:#2980b9" onclick="exportData()">Zapisz projekt</button>
+        <button class="btn" style="background:#e67e22" onclick="document.getElementById('import-file').click()">Wczytaj .json</button>
+        <button class="btn" style="background:#e74c3c; border-radius: 20px;" onclick="window.print()">Drukuj PDF</button>
     </div>
 </div>
 
@@ -21,24 +22,24 @@
 
 <div id="ov" onclick="closeModal()"></div>
 <div id="modal">
-    <h3 id="m-title">EDYCJA PUNKTU</h3>
+    <h3 id="m-title" style="margin:0 0 15px 0; color:var(--main); font-size: 16px;">EDYCJA PUNKTU</h3>
     
     <div class="modal-photo-preview" onclick="uploadImg('report', active.f, active.d)" id="m-photo-box">
-        <small>KLIKNIJ, ABY DODAĆ ZDJĘCIE USTERKI</small>
+        <small style="color:#a0aec0">KLIKNIJ, ABY DODAĆ ZDJĘCIE</small>
     </div>
 
-    <textarea id="m-desc" class="modal-field" placeholder="Opis usterki..."></textarea>
+    <textarea id="m-desc" class="modal-field" style="height:80px" placeholder="Opis usterki..."></textarea>
     <input id="m-norm" class="modal-field" placeholder="Norma / Uwagi...">
     
-    <div class="status-grid">
-        <button class="btn c-rep" onclick="setStatus('reported')">ZGŁOSZONE</button>
-        <button class="btn c-nrep" onclick="setStatus('not_reported')">NIEZGŁOSZONE</button>
-        <button class="btn c-none" onclick="setStatus('to_discuss')">DO OMÓWIENIA</button>
+    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; margin-bottom:15px;">
+        <button class="btn c-rep" style="font-size: 9px; padding: 10px 2px;" onclick="setStatus('reported')">ZGŁOSZONE</button>
+        <button class="btn c-nrep" style="font-size: 9px; padding: 10px 2px;" onclick="setStatus('not_reported')">NIEZGŁOSZONE</button>
+        <button class="btn c-none" style="font-size: 9px; padding: 10px 2px;" onclick="setStatus('to_discuss')">DO OMÓWIENIA</button>
     </div>
     
-    <div class="modal-footer">
-        <button class="btn btn-delete" onclick="deleteReport()">USUŃ</button>
-        <button class="btn btn-confirm" onclick="closeModal()">ZAPISZ</button>
+    <div style="display:flex; gap:10px;">
+        <button class="btn" style="background:#ecf0f1; color:#7f8c8d; flex:1" onclick="deleteReport()">USUŃ</button>
+        <button class="btn" style="background:var(--main); flex:1" onclick="closeModal()">ZAPISZ</button>
     </div>
 </div>
 
