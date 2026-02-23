@@ -14,7 +14,6 @@
         <button class="btn btn-add" onclick="addFloor()">+ Kondygnacja</button>
         <button class="btn btn-save" onclick="exportData()">Zapisz</button>
         <button class="btn btn-load" onclick="document.getElementById('import-file').click()">Wczytaj</button>
-        <button class="btn btn-print" onclick="window.print()">PDF</button>
     </div>
 </div>
 
@@ -22,14 +21,11 @@
 
 <div id="ov" onclick="closeModal()"></div>
 <div id="modal">
-    <h3>EDYCJA PUNKTU</h3>
-    <div id="m-photo-box" onclick="uploadImg('report', active.f, active.d)" 
-         style="width:100%; height:200px; border:2px dashed #ccc; margin-bottom:10px; display:flex; align-items:center; justify-content:center; cursor:pointer">
-        KLIKNIJ, ABY DODAĆ ZDJĘCIE USTERKI
+    <h3 id="m-title">EDYCJA PUNKTU</h3>
+    
+    <div class="modal-photo-preview" onclick="uploadImg('report', active.f, active.d)" id="m-photo-box">
+        <small>KLIKNIJ, ABY DODAĆ ZDJĘCIE USTERKI</small>
     </div>
-    <textarea id="m-desc" class="modal-field" style="width:100%; height:80px" placeholder="Opis..."></textarea>
-    <button class="btn" onclick="closeModal()" style="background:var(--main); width:100%">ZAPISZ</button>
-</div>
 
     <textarea id="m-desc" class="modal-field" placeholder="Opis usterki..."></textarea>
     <input id="m-norm" class="modal-field" placeholder="Norma / Uwagi...">
@@ -50,5 +46,4 @@
 
 <script src="galeria.js"></script>
 </body>
-
 </html>
