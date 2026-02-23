@@ -31,6 +31,39 @@ function uploadImg(type, fi, di) {
     input.click();
 }
 
+function importData(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = ev => {
+        try {
+            const importedData = JSON.parse(ev.target.result);
+            
+            // Mapowanie danych, aby upewnić się, że struktura jest zgodna
+            state.meta = importedData.meta || { inv:'', cli:'', adr:'', date:'', auth:'', tel:'', mail:'' };
+            state.logo = importedData.logo || '';
+            state.mainImg = importedData.mainImg || '';
+            
+            // Kluczowe: upewnienie się, że usterki (defects) są przypisane do kondygnacji
+            state.floors = (importedData.floors || []).map(f => ({
+                name: f.name || 'Kondygnacja',
+                plan: f.plan || '',
+                rotation: f.rotation || 0,
+                defects: f.defects || [] // To tutaj zazwyczaj uciekają dane
+            }));
+
+            console.log("Dane wczytane pomyślnie:", state);
+            render();
+            alert("Projekt wczytany pomyślnie! Liczba kondygnacji: " + state.floors.length);
+        } catch (err) {
+            console.error("Błąd wczytywania pliku JSON:", err);
+            alert("Błąd: Plik .json jest uszkodzony lub ma niewłaściwy format.");
+        }
+    };
+    reader.readAsText(file);
+}
+
 function addFloor() {
     state.floors.push({ name: 'NOWA KONDYGNACJA', plan: '', defects: [], rotation: 0 });
     render();
@@ -186,3 +219,4 @@ function render() {
 
 if(state.floors.length === 0) addFloor();
 render();
+
