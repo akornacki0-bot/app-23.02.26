@@ -37,19 +37,46 @@ body {
 }
 
 .plan-wrapper { 
-    width: 100%; height: 50vh; background: #fafafa; 
-    border: 1px solid #e1e1e1; border-radius: 8px; 
-    position: relative; display: flex; align-items: center; 
-    justify-content: center; overflow: hidden; 
+    width: 100%; 
+    height: 60vh; 
+    background: #fafafa; 
+    border: 1px solid #ddd;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
 }
 
-.plan-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.plan-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
 
 .dot { 
     position: absolute; width: 32px; height: 32px; /* Większe pod palec */
     border-radius: 50%; border: 2px solid #fff; color: #fff; 
     display: flex; align-items: center; justify-content: center; 
     transform: translate(-50%, -50%); font-weight: 800; 
+}
+
+.q-photo {
+    width: 100%;
+    height: 350px; /* Zwiększone z Twojego oryginału */
+    background: #f0f0f0;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.q-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Zdjęcie wypełni całą ramkę */
 }
 
 /* Modal dostosowany do dotyku */
@@ -64,5 +91,6 @@ body {
 .c-rep { background: var(--rep); }
 .c-nrep { background: var(--nrep); }
 .c-none { background: var(--none); }
+
 
 @media print { .no-print { display: none !important; } .page { width: 100%; box-shadow: none; } }
