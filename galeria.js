@@ -11,6 +11,11 @@ const LEGAL_TEXT = "Niniejszy dokument nie stanowi opinii biegłego sądowego an
 
 // --- FUNKCJE POMOCNICZE ---
 
+// Funkcja zapisu do pamięci przeglądarki
+function saveToLocal() {
+    localStorage.setItem('inspekcja_backup', JSON.stringify(state));
+}
+
 function uploadImg(type, fi, di) {
     const input = document.createElement('input');
     input.type = 'file';
@@ -27,6 +32,7 @@ function uploadImg(type, fi, di) {
                 const box = document.getElementById('m-photo-box');
                 if(box) box.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:contain">`;
             }
+            saveToLocal(); // AUTOZAPIS po wgraniu zdjęcia
             render();
         };
         reader.readAsDataURL(file);
@@ -42,22 +48,14 @@ function importData(e) {
     reader.onload = ev => {
         try {
             const data = JSON.parse(ev.target.result);
-            console.log("Wczytano dane:", data);
-
-            // 1. Mapowanie metadanych (zgodnie z Twoim plikiem)
             state.meta = data.meta || state.meta;
             state.logo = data.logo || '';
             state.mainImg = data.mainImg || '';
 
-            // 2. Szukanie kondygnacji i usterek
-            // Sprawdzamy, czy usterki są w 'defects', 'points' czy 'items'
             let rawPoints = data.defects || data.points || data.items || [];
-            
-            // Sprawdzamy czy są kondygnacje
             let rawFloors = data.floors || data.levels || [];
 
             if (rawFloors.length > 0) {
-                // Jeśli plik ma strukturę wielopoziomową
                 state.floors = rawFloors.map(f => ({
                     name: f.name || "Kondygnacja",
                     plan: f.plan || f.image || '',
@@ -71,10 +69,9 @@ function importData(e) {
                     }))
                 }));
             } else {
-                // Jeśli plik to pojedynczy rzut (tak jak sugeruje Twój fragment)
                 state.floors = [{
                     name: "RZUT GŁÓWNY",
-                    plan: data.plan || data.mainImg || '', // Czasem plan jest w mainImg
+                    plan: data.plan || data.mainImg || '',
                     defects: rawPoints.map(d => ({
                         x: parseFloat(d.x) || 0,
                         y: parseFloat(d.y) || 0,
@@ -86,15 +83,12 @@ function importData(e) {
                 }];
             }
 
+            saveToLocal(); // Zapisujemy po imporcie
             render();
-            
-            // Podsumowanie dla Ciebie:
             const count = state.floors.reduce((a, b) => a + b.defects.length, 0);
             alert("Wczytano pomyślnie!\nKondygnacji: " + state.floors.length + "\nZnalezionych usterek: " + count);
-
         } catch (err) {
-            console.error(err);
-            alert("Błąd: Plik ma nieprawidłowy format lub jest uszkodzony.");
+            alert("Błąd: Plik ma nieprawidłowy format.");
         }
     };
     reader.readAsText(file);
@@ -102,6 +96,7 @@ function importData(e) {
 
 function addFloor() {
     state.floors.push({ name: 'NOWA KONDYGNACJA', plan: '', defects: [] });
+    saveToLocal();
     render();
 }
 
@@ -114,6 +109,7 @@ function addDot(e, fi) {
         y: ((e.clientY - rect.top) / rect.height) * 100,
         desc: '', norm: '', status: 'to_discuss', img: ''
     });
+    saveToLocal();
     render();
     openModal(fi, di);
 }
@@ -139,6 +135,7 @@ function closeModal() {
     }
     document.getElementById('ov').style.display = 'none';
     document.getElementById('modal').style.display = 'none';
+    saveToLocal(); // Zapisujemy zmiany po zamknięciu edycji
     render();
 }
 
@@ -150,6 +147,7 @@ function setStatus(s) {
 function deleteReport() { 
     if(confirm("USUNĄĆ?")) { 
         state.floors[active.f].defects.splice(active.d, 1); 
+        saveToLocal();
         closeModal(); 
     } 
 }
@@ -168,9 +166,9 @@ function render() {
     if(!app) return;
     app.innerHTML = '';
 
-    let totalPages = 1;
+    // Dynamiczne liczenie stron
+    let totalPages = 1; 
     state.floors.forEach(f => { totalPages += 1 + Math.ceil(f.defects.length / 2); });
-
     let currentPage = 1;
 
     const header = () => `<div class="header-info">
@@ -193,20 +191,19 @@ function render() {
         <div class="logo-box" onclick="uploadImg('logo')">${state.logo ? `<img src="${state.logo}" style="max-height:100%">` : '<b>DODAJ LOGO</b>'}</div>
         <h1 style="text-align:center; font-size:26px; margin:30px 0;">PROTOKÓŁ OGLĘDZIN</h1>
         <div style="display:grid; grid-template-columns: 150px 1fr; gap:10px; font-size:14px">
-            <b>INWESTYCJA:</b> <input value="${state.meta.inv}" oninput="state.meta.inv=this.value">
-            <b>ADRES:</b> <input value="${state.meta.adr}" oninput="state.meta.adr=this.value">
-            <b>ZAMAWIAJĄCY:</b> <input value="${state.meta.cli}" oninput="state.meta.cli=this.value">
-            <b>DATA:</b> <input type="date" value="${state.meta.date}" oninput="state.meta.date=this.value">
-            <b>INSPEKTOR:</b> <input value="${state.meta.auth}" oninput="state.meta.auth=this.value">
+            <b>INWESTYCJA:</b> <input value="${state.meta.inv}" oninput="state.meta.inv=this.value; saveToLocal()">
+            <b>ADRES:</b> <input value="${state.meta.adr}" oninput="state.meta.adr=this.value; saveToLocal()">
+            <b>ZAMAWIAJĄCY:</b> <input value="${state.meta.cli}" oninput="state.meta.cli=this.value; saveToLocal()">
+            <b>DATA:</b> <input type="date" value="${state.meta.date}" oninput="state.meta.date=this.value; saveToLocal()">
+            <b>INSPEKTOR:</b> <input value="${state.meta.auth}" oninput="state.meta.auth=this.value; saveToLocal()">
         </div>
         <div class="main-img-box" onclick="uploadImg('main')">${state.mainImg ? `<img src="${state.mainImg}" style="width:100%; height:100%; object-fit:contain">` : '<b>DODAJ ZDJĘCIE GŁÓWNE</b>'}</div>
         ${footer(currentPage++)}
     `;
     app.appendChild(cover);
 
-    // 2. KONDYGNACJE I USTERKI
+    // 2. KONDYGNACJE
     state.floors.forEach((f, fi) => {
-        // Strona rzutu
         const pPage = document.createElement('div');
         pPage.className = 'page';
         pPage.innerHTML = `
@@ -215,7 +212,6 @@ function render() {
             <div class="plan-wrapper" onclick="addDot(event, ${fi})">
                 ${f.plan ? `<img src="${f.plan}" class="plan-img">` : '<b>KLIKNIJ, ABY WGRAĆ RZUT</b>'}
                 ${f.defects.map((d, di) => {
-                    // Kluczowe poprawienie kolorów kropek
                     let colorClass = 'c-none'; 
                     if(d.status === 'reported') colorClass = 'c-rep';
                     if(d.status === 'not_reported') colorClass = 'c-nrep';
@@ -229,7 +225,7 @@ function render() {
         `;
         app.appendChild(pPage);
 
-        // Karty usterek
+        // SZCZEGÓŁY (Karty po 2 na stronę)
         for(let i=0; i < f.defects.length; i+=2) {
             const dPage = document.createElement('div');
             dPage.className = 'page';
@@ -256,6 +252,28 @@ function render() {
     });
 }
 
-if(state.floors.length === 0) addFloor();
-render();
+// --- ZABEZPIECZENIA ---
 
+window.onbeforeunload = function() {
+    if (state.floors.some(f => f.defects.length > 0) || state.meta.inv !== '') {
+        return "Masz niezapisane zmiany.";
+    }
+};
+
+window.onload = function() {
+    const backup = localStorage.getItem('inspekcja_backup');
+    if (backup) {
+        const savedState = JSON.parse(backup);
+        if (confirm("Znaleziono zapisany projekt w pamięci. Czy go przywrócić?")) {
+            state = savedState;
+            render();
+        } else {
+            // Jeśli nie przywracamy, a startujemy od zera
+            if(state.floors.length === 0) addFloor();
+        }
+    } else {
+        if(state.floors.length === 0) addFloor();
+    }
+};
+
+render();
