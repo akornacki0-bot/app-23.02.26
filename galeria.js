@@ -69,17 +69,17 @@ function importData(e) {
                     }))
                 }));
             } else {
+                // Jeśli plik to pojedynczy rzut
                 state.floors = [{
                     name: "RZUT GŁÓWNY",
-                    plan: data.plan || data.mainImg || '',
-                    // Poprawione mapowanie wewnątrz pętli .map() dla usterek
-                    defects: (f.defects || f.points || []).map(d => ({
+                    plan: data.plan || data.mainImg || '', 
+                    // NAPRAWIONO: Zmieniono 'f.defects' na 'data.defects' (lub inne klucze)
+                    defects: (data.defects || data.points || data.items || []).map(d => ({
                         x: parseFloat(d.x) || 0,
                         y: parseFloat(d.y) || 0,
                         desc: d.desc || d.description || '',
                         norm: d.norm || '',
                         status: d.status || 'to_discuss',
-                        // Szukamy zdjęcia w każdym możliwym polu:
                         img: d.img || d.photo || d.image || d.src || '' 
                     }))
                 }];
@@ -300,5 +300,6 @@ function clearAllData() {
 }
 
 render();
+
 
 
