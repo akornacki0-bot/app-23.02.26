@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SYSTEM RAPORTOWANIA v19.15</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="toolbar no-print">
+    <div id="stats-box"></div>
+    <div class="button-group">
+        <button class="btn btn-add" onclick="addFloor()">+ Kondygnacja</button>
+        <button class="btn btn-save" onclick="exportData()">Zapisz</button>
+        <button class="btn btn-load" onclick="document.getElementById('import-file').click()">Wczytaj</button>
+        <button class="btn btn-print" onclick="window.print()">PDF</button>
+    </div>
+</div>
+
+<input type="file" id="import-file" style="display:none" onchange="importData(event)">
+
+<div id="ov" onclick="closeModal()"></div>
+<div id="modal">
+    <h3 id="m-title">EDYCJA PUNKTU</h3>
+    
+    <div class="modal-photo-preview" onclick="uploadImg('report', active.f, active.d)" id="m-photo-box">
+        <small>KLIKNIJ, ABY DODAĆ ZDJĘCIE</small>
+    </div>
+
+    <textarea id="m-desc" class="modal-field" placeholder="Opis usterki..."></textarea>
+    <input id="m-norm" class="modal-field" placeholder="Norma / Uwagi...">
+    
+    <div class="status-grid">
+        <button class="btn c-rep" onclick="setStatus('reported')">ZGŁOSZONE</button>
+        <button class="btn c-nrep" onclick="setStatus('not_reported')">NIEZGŁOSZONE</button>
+        <button class="btn c-none" onclick="setStatus('to_discuss')">DO OMÓWIENIA</button>
+    </div>
+    
+    <div class="modal-footer">
+        <button class="btn btn-delete" onclick="deleteReport()">USUŃ</button>
+        <button class="btn btn-confirm" onclick="closeModal()">ZAPISZ</button>
+    </div>
+</div>
+
+<div id="app"></div>
+
+<script src="galeria.js"></script>
+</body>
+</html>
