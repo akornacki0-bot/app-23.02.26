@@ -117,12 +117,6 @@ function exportData() {
     link.click();
 }
 
-function importData(e) {
-    const reader = new FileReader();
-    reader.onload = ev => { state = JSON.parse(ev.target.result); render(); };
-    reader.readAsText(e.target.files[0]);
-}
-
 function render() {
     const app = document.getElementById('app');
     app.innerHTML = '';
@@ -219,4 +213,5 @@ function render() {
 
 if(state.floors.length === 0) addFloor();
 render();
+
 
