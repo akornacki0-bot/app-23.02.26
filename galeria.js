@@ -38,19 +38,28 @@ function importData(e) {
     const reader = new FileReader();
     reader.onload = ev => {
         try {
-            const data = JSON.parse(ev.target.result);
-            
-            // 1. Mapowanie Meta
-            state.meta = data.meta || data.header || { inv:'', cli:'', adr:'', date:'', auth:'', tel:'', mail:'' };
-            state.logo = data.logo || '';
-            state.mainImg = data.mainImg || data.coverImage || '';
+            const rawData = JSON.parse(ev.target.result);
+            console.log("Próba wczytania:", rawData);
 
-            // 2. Pancerny import kondygnacji
-            const rawFloors = data.floors || data.levels || data.pages || [];
+            // 1. Znajdź główny obiekt (często dane są w rawData.project lub rawData.data)
+            const data = rawData.state || rawData.data || rawData.project || rawData;
+
+            // 2. Import Meta
+            state.meta = data.meta || data.header || state.meta;
+            state.logo = data.logo || '';
+            state.mainImg = data.mainImg || '';
+
+            // 3. GŁĘBOKIE SZUKANIE KONDYGNACJI
+            let foundFloors = data.floors || data.levels || data.pages || [];
             
-            if (rawFloors.length > 0) {
-                state.floors = rawFloors.map(f => {
-                    // SZUKANIE USTEREK POD KAŻDĄ MOŻLIWĄ NAZWĄ
+            // Jeśli nie znaleźliśmy tablicy kondygnacji, szukamy jej głębiej
+            if (foundFloors.length === 0 && data.project && data.project.floors) {
+                foundFloors = data.project.floors;
+            }
+
+            if (foundFloors.length > 0) {
+                state.floors = foundFloors.map(f => {
+                    // Szukamy usterek pod każdą możliwą nazwą
                     const rawDefects = f.defects || f.points || f.items || f.reports || f.usterki || [];
                     
                     return {
@@ -63,17 +72,35 @@ function importData(e) {
                             desc: d.desc || d.description || d.opis || d.text || '',
                             norm: d.norm || d.law || d.norma || '',
                             status: d.status || 'to_discuss',
-                            img: d.img || d.photo || d.zdjecie || d.image || ''
+                            img: d.img || d.photo || d.zdjecie || ''
                         }))
                     };
                 });
+            } else {
+                // Jeśli plik nie ma struktury kondygnacji, ale ma usterki (płaska struktura)
+                const flatDefects = data.defects || data.points || rawData.defects || [];
+                if (flatDefects.length > 0) {
+                    state.floors = [{
+                        name: "Importowane Dane",
+                        plan: data.plan || data.mainImg || '',
+                        defects: flatDefects.map(d => ({
+                            x: parseFloat(d.x) || 0,
+                            y: parseFloat(d.y) || 0,
+                            desc: d.desc || d.description || '',
+                            norm: d.norm || '',
+                            status: d.status || 'to_discuss',
+                            img: d.img || d.photo || ''
+                        }))
+                    }];
+                }
             }
 
             render();
             const total = state.floors.reduce((acc, f) => acc + f.defects.length, 0);
-            alert(`Wczytano projekt!\nKondygnacje: ${state.floors.length}\nUsterki: ${total}`);
+            alert(`ANALIZA PLIKU ZAKOŃCZONA\nKondygnacje: ${state.floors.length}\nZnalezione usterki: ${total}`);
+            
         } catch (err) {
-            alert("Błąd odczytu pliku JSON. Sprawdź format.");
+            alert("Błąd: Przeglądarka nie może odczytać tego pliku.");
             console.error(err);
         }
     };
@@ -237,3 +264,4 @@ function render() {
 // Inicjalizacja
 if(state.floors.length === 0) addFloor();
 render();
+
