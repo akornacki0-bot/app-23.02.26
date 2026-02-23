@@ -42,38 +42,59 @@ function importData(e) {
     reader.onload = ev => {
         try {
             const data = JSON.parse(ev.target.result);
-            
-            // 1. Meta
-            state.meta = data.meta || data.header || state.meta;
+            console.log("Wczytano dane:", data);
+
+            // 1. Mapowanie metadanych (zgodnie z Twoim plikiem)
+            state.meta = data.meta || state.meta;
             state.logo = data.logo || '';
             state.mainImg = data.mainImg || '';
 
-            // 2. Agresywny import kondygnacji
-            let rawFloors = data.floors || data.levels || data.pages || [];
-            if (rawFloors.length === 0 && (data.plan || data.rzut)) {
-                rawFloors = [{ name: 'Rzut Główny', plan: data.plan || data.rzut, defects: data.defects || data.points || [] }];
-            }
+            // 2. Szukanie kondygnacji i usterek
+            // Sprawdzamy, czy usterki są w 'defects', 'points' czy 'items'
+            let rawPoints = data.defects || data.points || data.items || [];
+            
+            // Sprawdzamy czy są kondygnacje
+            let rawFloors = data.floors || data.levels || [];
 
-            state.floors = rawFloors.map(f => {
-                const rawDefects = f.defects || f.points || f.usterki || f.items || [];
-                return {
-                    name: f.name || f.title || 'Kondygnacja',
-                    plan: f.plan || f.image || f.rzut || '',
-                    defects: rawDefects.map(d => ({
+            if (rawFloors.length > 0) {
+                // Jeśli plik ma strukturę wielopoziomową
+                state.floors = rawFloors.map(f => ({
+                    name: f.name || "Kondygnacja",
+                    plan: f.plan || f.image || '',
+                    defects: (f.defects || []).map(d => ({
                         x: parseFloat(d.x) || 0,
                         y: parseFloat(d.y) || 0,
-                        desc: d.desc || d.description || d.opis || '',
-                        norm: d.norm || d.law || d.norma || '',
+                        desc: d.desc || d.description || '',
+                        norm: d.norm || '',
                         status: d.status || 'to_discuss',
                         img: d.img || d.photo || ''
                     }))
-                };
-            });
+                }));
+            } else {
+                // Jeśli plik to pojedynczy rzut (tak jak sugeruje Twój fragment)
+                state.floors = [{
+                    name: "RZUT GŁÓWNY",
+                    plan: data.plan || data.mainImg || '', // Czasem plan jest w mainImg
+                    defects: rawPoints.map(d => ({
+                        x: parseFloat(d.x) || 0,
+                        y: parseFloat(d.y) || 0,
+                        desc: d.desc || d.description || '',
+                        norm: d.norm || '',
+                        status: d.status || 'to_discuss',
+                        img: d.img || d.photo || ''
+                    }))
+                }];
+            }
 
             render();
-            alert("Wczytano: " + state.floors.length + " kondygnacji.");
+            
+            // Podsumowanie dla Ciebie:
+            const count = state.floors.reduce((a, b) => a + b.defects.length, 0);
+            alert("Wczytano pomyślnie!\nKondygnacji: " + state.floors.length + "\nZnalezionych usterek: " + count);
+
         } catch (err) {
-            alert("Błąd pliku: " + err.message);
+            console.error(err);
+            alert("Błąd: Plik ma nieprawidłowy format lub jest uszkodzony.");
         }
     };
     reader.readAsText(file);
@@ -237,3 +258,4 @@ function render() {
 
 if(state.floors.length === 0) addFloor();
 render();
+
