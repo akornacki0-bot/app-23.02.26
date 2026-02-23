@@ -9,6 +9,8 @@ let active = { f: null, d: null };
 
 const LEGAL_TEXT = "Niniejszy dokument nie stanowi opinii biegłego sądowego ani orzeczenia rzeczoznawcy w rozumieniu przepisów prawa. Jest to raport z oględzin technicznych dokumentujący stan faktyczny w dniu kontroli. Usterki zostały naniesione poglądowo na podstawie wizji lokalnej.";
 
+// --- FUNKCJE POMOCNICZE ---
+
 function uploadImg(type, fi, di) {
     const input = document.createElement('input');
     input.type = 'file';
@@ -22,7 +24,8 @@ function uploadImg(type, fi, di) {
             else if(type==='plan') state.floors[fi].plan = ev.target.result;
             else if(type==='report') {
                 state.floors[fi].defects[di].img = ev.target.result;
-                document.getElementById('m-photo-box').innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:contain">`;
+                const box = document.getElementById('m-photo-box');
+                if(box) box.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:contain">`;
             }
             render();
         };
@@ -39,75 +42,45 @@ function importData(e) {
     reader.onload = ev => {
         try {
             const data = JSON.parse(ev.target.result);
-            console.log("DEBUG: Surowe dane:", data);
-
-            // 1. Dane nagłówkowe (Meta)
+            
+            // 1. Meta
             state.meta = data.meta || data.header || state.meta;
             state.logo = data.logo || '';
-            state.mainImg = data.mainImg || data.coverImg || '';
+            state.mainImg = data.mainImg || '';
 
-            // 2. Import Kondygnacji
+            // 2. Agresywny import kondygnacji
             let rawFloors = data.floors || data.levels || data.pages || [];
-            
-            if (rawFloors.length === 0) {
-                // Jeśli nie ma tablicy floors, tworzymy sztuczną na podstawie tego co jest
-                state.floors = [{ name: 'KONDYGNACJA 1', plan: data.plan || '', defects: [] }];
-            } else {
-                state.floors = rawFloors.map(f => ({
+            if (rawFloors.length === 0 && (data.plan || data.rzut)) {
+                rawFloors = [{ name: 'Rzut Główny', plan: data.plan || data.rzut, defects: data.defects || data.points || [] }];
+            }
+
+            state.floors = rawFloors.map(f => {
+                const rawDefects = f.defects || f.points || f.usterki || f.items || [];
+                return {
                     name: f.name || f.title || 'Kondygnacja',
                     plan: f.plan || f.image || f.rzut || '',
-                    defects: [] // Na razie pusta lista, wypełnimy ją niżej
-                }));
-            }
-
-            // 3. AGRESYWNE SZUKANIE USTEREK (Odkurzacz)
-            state.floors.forEach((floor, index) => {
-                // Szukamy wewnątrz obiektu kondygnacji f (z surowych danych)
-                let source = rawFloors[index] || data; 
-                let foundDefects = source.defects || source.points || source.items || source.usterki || [];
-
-                // Jeśli usterki są zapisane jako obiekt a nie tablica, zamień na tablicę
-                if (!Array.isArray(foundDefects)) {
-                    foundDefects = Object.values(foundDefects);
-                }
-
-                floor.defects = foundDefects.map(d => ({
-                    x: parseFloat(d.x) || 0,
-                    y: parseFloat(d.y) || 0,
-                    desc: d.desc || d.description || d.opis || '',
-                    norm: d.norm || d.law || d.norma || '',
-                    status: d.status || 'to_discuss',
-                    img: d.img || d.photo || d.zdjecie || ''
-                }));
+                    defects: rawDefects.map(d => ({
+                        x: parseFloat(d.x) || 0,
+                        y: parseFloat(d.y) || 0,
+                        desc: d.desc || d.description || d.opis || '',
+                        norm: d.norm || d.law || d.norma || '',
+                        status: d.status || 'to_discuss',
+                        img: d.img || d.photo || ''
+                    }))
+                };
             });
 
-            // 4. RATUNEK: Jeśli po wszystkim nadal 0 usterek, a w pliku są "globalne" punkty
-            const globalDefects = data.defects || data.points || data.all_points || [];
-            if (state.floors[0].defects.length === 0 && globalDefects.length > 0) {
-                console.log("DEBUG: Znaleziono punkty globalne, przypisuję do 1. rzutu");
-                state.floors[0].defects = globalDefects.map(d => ({
-                    x: parseFloat(d.x) || 0,
-                    y: parseFloat(d.y) || 0,
-                    desc: d.desc || d.description || '',
-                    norm: d.norm || '',
-                    status: d.status || 'to_discuss',
-                    img: d.img || d.photo || ''
-                }));
-            }
-
             render();
-            alert("SUKCES!\nKondygnacje: " + state.floors.length + "\nUsterki: " + state.floors.reduce((a,b)=>a+b.defects.length, 0));
-
+            alert("Wczytano: " + state.floors.length + " kondygnacji.");
         } catch (err) {
-            console.error("BŁĄD IMPORTU:", err);
-            alert("Błąd krytyczny: " + err.message);
+            alert("Błąd pliku: " + err.message);
         }
     };
     reader.readAsText(file);
 }
 
 function addFloor() {
-    state.floors.push({ name: 'NOWA KONDYGNACJA', plan: '', defects: [], rotation: 0 });
+    state.floors.push({ name: 'NOWA KONDYGNACJA', plan: '', defects: [] });
     render();
 }
 
@@ -124,10 +97,12 @@ function addDot(e, fi) {
     openModal(fi, di);
 }
 
+// --- MODAL & STATUS ---
+
 function openModal(fi, di) {
     active = { f: fi, d: di };
     const d = state.floors[fi].defects[di];
-    document.getElementById('m-title').innerText = `EDYCJA PUNKTU NR ${di + 1} (${state.floors[fi].name})`;
+    document.getElementById('m-title').innerText = `PUNKT NR ${di + 1}`;
     document.getElementById('m-desc').value = d.desc;
     document.getElementById('m-norm').value = d.norm;
     document.getElementById('m-photo-box').innerHTML = d.img ? `<img src="${d.img}" style="width:100%;height:100%;object-fit:contain">` : '<p>DODAJ ZDJĘCIE</p>';
@@ -136,7 +111,7 @@ function openModal(fi, di) {
 }
 
 function closeModal() {
-    if(active.f !== null) {
+    if(active.f !== null && active.d !== null) {
         const d = state.floors[active.f].defects[active.d];
         d.desc = document.getElementById('m-desc').value;
         d.norm = document.getElementById('m-norm').value;
@@ -152,116 +127,113 @@ function setStatus(s) {
 }
 
 function deleteReport() { 
-    if(confirm("CZY NA PEWNO USUNĄĆ TEN PUNKT?")) { 
+    if(confirm("USUNĄĆ?")) { 
         state.floors[active.f].defects.splice(active.d, 1); 
         closeModal(); 
     } 
 }
 
 function exportData() {
-    const dataStr = JSON.stringify(state);
-    const blob = new Blob([dataStr], {type: "application/json"});
-    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url;
-    link.download = `RAPORT_${state.meta.inv || 'EKSPORT'}.json`;
+    link.href = URL.createObjectURL(new Blob([JSON.stringify(state)], {type: "application/json"}));
+    link.download = `RAPORT_${state.meta.inv || 'PROJEKT'}.json`;
     link.click();
 }
 
+// --- GŁÓWNY RENDER ---
+
 function render() {
     const app = document.getElementById('app');
+    if(!app) return;
     app.innerHTML = '';
 
     let totalPages = 1;
-    state.floors.forEach(f => {
-        totalPages += 1;
-        totalPages += Math.ceil(f.defects.length / 2);
-    });
+    state.floors.forEach(f => { totalPages += 1 + Math.ceil(f.defects.length / 2); });
 
     let currentPage = 1;
 
-    const createPageHeader = () => `
-        <div class="header-info">
-            <div>OBIEKT: ${state.meta.inv || '...'} | ADRES: ${state.meta.adr || '...'}</div>
-            ${state.logo ? `<img src="${state.logo}" style="height:12mm">` : ''}
-        </div>`;
+    const header = () => `<div class="header-info">
+        <div>OBIEKT: ${state.meta.inv || '...'} | ADRES: ${state.meta.adr || '...'}</div>
+        ${state.logo ? `<img src="${state.logo}" style="height:10mm">` : ''}
+    </div>`;
 
-    const createPageFooter = (num) => `
-        <div class="footer-info">
-            <div class="legal-note">${LEGAL_TEXT}</div>
-            <div style="display:flex; justify-content:space-between; font-size:9px; font-weight:700">
-                <span>SYSTEM RAPORTOWANIA v19.15.0</span>
-                <span>STRONA ${num} / ${totalPages}</span>
-            </div>
-        </div>`;
+    const footer = (num) => `<div class="footer-info">
+        <div class="legal-note">${LEGAL_TEXT}</div>
+        <div style="display:flex; justify-content:space-between; font-size:9px; font-weight:700">
+            <span>SYSTEM v19.15.0</span>
+            <span>STRONA ${num} / ${totalPages}</span>
+        </div>
+    </div>`;
 
-    // 1. STRONA TYTUŁOWA
+    // 1. OKŁADKA
     const cover = document.createElement('div');
     cover.className = 'page';
     cover.innerHTML = `
-        <div class="logo-box" onclick="uploadImg('logo')">${state.logo ? `<img src="${state.logo}" style="max-height:100%">` : '<b>DODAJ LOGO FIRMY</b>'}</div>
-        <h1 style="text-align:center; font-size:28px; margin:40px 0; color:#1a252f">PROTOKÓŁ Z OGLĘDZIN TECHNICZNYCH</h1>
-        <div style="display:grid; grid-template-columns: 180px 1fr; gap:15px; font-size:14px">
+        <div class="logo-box" onclick="uploadImg('logo')">${state.logo ? `<img src="${state.logo}" style="max-height:100%">` : '<b>DODAJ LOGO</b>'}</div>
+        <h1 style="text-align:center; font-size:26px; margin:30px 0;">PROTOKÓŁ OGLĘDZIN</h1>
+        <div style="display:grid; grid-template-columns: 150px 1fr; gap:10px; font-size:14px">
             <b>INWESTYCJA:</b> <input value="${state.meta.inv}" oninput="state.meta.inv=this.value">
+            <b>ADRES:</b> <input value="${state.meta.adr}" oninput="state.meta.adr=this.value">
             <b>ZAMAWIAJĄCY:</b> <input value="${state.meta.cli}" oninput="state.meta.cli=this.value">
-            <b>ADRES OBIEKTU:</b> <input value="${state.meta.adr}" oninput="state.meta.adr=this.value">
-            <b>DATA KONTROLI:</b> <input type="date" value="${state.meta.date}" oninput="state.meta.date=this.value">
+            <b>DATA:</b> <input type="date" value="${state.meta.date}" oninput="state.meta.date=this.value">
             <b>INSPEKTOR:</b> <input value="${state.meta.auth}" oninput="state.meta.auth=this.value">
-            <b>TELEFON:</b> <input value="${state.meta.tel}" oninput="state.meta.tel=this.value">
         </div>
-        <div class="main-img-box" onclick="uploadImg('main')">${state.mainImg ? `<img src="${state.mainImg}" style="width:100%">` : '<b>DODAJ ZDJĘCIE GŁÓWNE</b>'}</div>
-        ${createPageFooter(currentPage++)}
+        <div class="main-img-box" onclick="uploadImg('main')">${state.mainImg ? `<img src="${state.mainImg}" style="width:100%; height:100%; object-fit:contain">` : '<b>DODAJ ZDJĘCIE GŁÓWNE</b>'}</div>
+        ${footer(currentPage++)}
     `;
     app.appendChild(cover);
 
-    // 2. KONDYGNACJE
+    // 2. KONDYGNACJE I USTERKI
     state.floors.forEach((f, fi) => {
+        // Strona rzutu
         const pPage = document.createElement('div');
         pPage.className = 'page';
         pPage.innerHTML = `
-            ${createPageHeader()}
-            <h2 style="margin-top:0">RZUT KONDYGNACJI: ${f.name}</h2>
+            ${header()}
+            <h2 style="margin-top:0">RZUT: ${f.name}</h2>
             <div class="plan-wrapper" onclick="addDot(event, ${fi})">
                 ${f.plan ? `<img src="${f.plan}" class="plan-img">` : '<b>KLIKNIJ, ABY WGRAĆ RZUT</b>'}
-                ${f.defects.map((d, di) => `
-                    <div class="dot ${d.status==='reported'?'c-rep':(d.status==='not_reported'?'c-nrep':'c-none')}" 
-                         style="left:${d.x}%; top:${d.y}%" 
-                         onclick="event.stopPropagation(); openModal(${fi}, ${di})">${di+1}</div>
-                `).join('')}
+                ${f.defects.map((d, di) => {
+                    // Kluczowe poprawienie kolorów kropek
+                    let colorClass = 'c-none'; 
+                    if(d.status === 'reported') colorClass = 'c-rep';
+                    if(d.status === 'not_reported') colorClass = 'c-nrep';
+                    
+                    return `<div class="dot ${colorClass}" 
+                                 style="left:${d.x}%; top:${d.y}%" 
+                                 onclick="event.stopPropagation(); openModal(${fi}, ${di})">${di+1}</div>`;
+                }).join('')}
             </div>
-            ${createPageFooter(currentPage++)}
+            ${footer(currentPage++)}
         `;
         app.appendChild(pPage);
 
-        // 3. KARTY USTEREK
+        // Karty usterek
         for(let i=0; i < f.defects.length; i+=2) {
             const dPage = document.createElement('div');
             dPage.className = 'page';
-            let html = createPageHeader() + `<h2 style="margin-top:0">SZCZEGÓŁY - ${f.name}</h2><table class="grid-table">`;
+            let html = header() + `<h2 style="margin-top:0">SZCZEGÓŁY - ${f.name}</h2><table class="grid-table">`;
             for(let j=0; j<2; j++) {
                 const idx = i+j;
                 if(idx < f.defects.length) {
                     const d = f.defects[idx];
+                    let colorClass = d.status === 'reported' ? 'c-rep' : (d.status === 'not_reported' ? 'c-nrep' : 'c-none');
                     html += `<tr><td>
-                        <div style="display:flex; justify-content:space-between">
+                        <div style="display:flex; justify-content:space-between; align-items:center">
                             <b>PUNKT NR ${idx+1}</b>
-                            <span class="btn ${d.status==='reported'?'c-rep':(d.status==='not_reported'?'c-nrep':'c-none')}" style="padding:2px 8px; font-size:9px">${d.status.toUpperCase()}</span>
+                            <span class="${colorClass}" style="padding:3px 10px; border-radius:4px; color:white; font-size:10px">${d.status.toUpperCase()}</span>
                         </div>
-                        <div style="margin-top:10px; font-size:13px"><b>OPIS:</b> ${d.desc || 'Brak opisu.'}</div>
-                        <div style="margin-top:5px; font-size:11px; color:#e74c3c"><b>NORMA:</b> ${d.norm || '---'}</div>
-                        <div class="q-photo">${d.img ? `<img src="${d.img}">` : '<b>BRAK ZDJĘCIA</b>'}</div>
+                        <div style="margin:10px 0; font-size:13px"><b>OPIS:</b> ${d.desc || '...'}</div>
+                        <div style="color:red; font-size:11px"><b>NORMA:</b> ${d.norm || '---'}</div>
+                        <div class="q-photo">${d.img ? `<img src="${d.img}" style="width:100%; height:100%; object-fit:contain">` : '<b>BRAK ZDJĘCIA</b>'}</div>
                     </td></tr>`;
                 }
             }
-            html += `</table>${createPageFooter(currentPage++)}`;
-            dPage.innerHTML = html;
+            dPage.innerHTML = html + `</table>${footer(currentPage++)}`;
             app.appendChild(dPage);
         }
     });
 }
 
-// Inicjalizacja
 if(state.floors.length === 0) addFloor();
 render();
-
-
