@@ -38,27 +38,42 @@ function importData(e) {
     const reader = new FileReader();
     reader.onload = ev => {
         try {
-            const importedData = JSON.parse(ev.target.result);
+            const data = JSON.parse(ev.target.result);
             
-            // Mapowanie danych, aby upewnić się, że struktura jest zgodna
-            state.meta = importedData.meta || { inv:'', cli:'', adr:'', date:'', auth:'', tel:'', mail:'' };
-            state.logo = importedData.logo || '';
-            state.mainImg = importedData.mainImg || '';
+            // 1. Import Meta (dane nagłówkowe)
+            state.meta = data.meta || data.header || state.meta;
+            state.logo = data.logo || '';
+            state.mainImg = data.mainImg || data.coverImage || '';
             
-            // Kluczowe: upewnienie się, że usterki (defects) są przypisane do kondygnacji
-            state.floors = (importedData.floors || []).map(f => ({
-                name: f.name || 'Kondygnacja',
-                plan: f.plan || '',
-                rotation: f.rotation || 0,
-                defects: f.defects || [] // To tutaj zazwyczaj uciekają dane
-            }));
+            // 2. Inteligentny Import Kondygnacji i Usterek
+            // Sprawdzamy różne nazwy pól: floors, levels, pages
+            const sourceFloors = data.floors || data.levels || data.pages || [];
+            
+            state.floors = sourceFloors.map(f => {
+                // Szukamy usterek pod różnymi nazwami: defects, points, reports, items
+                const sourceDefects = f.defects || f.points || f.reports || f.items || f.issues || [];
+                
+                return {
+                    name: f.name || f.title || 'Kondygnacja',
+                    plan: f.plan || f.image || f.map || '',
+                    rotation: f.rotation || 0,
+                    defects: sourceDefects.map(d => ({
+                        x: d.x || 0,
+                        y: d.y || 0,
+                        desc: d.desc || d.description || d.text || '',
+                        norm: d.norm || d.law || d.rules || '',
+                        status: d.status || 'to_discuss',
+                        img: d.img || d.photo || d.image || ''
+                    }))
+                };
+            });
 
-            console.log("Dane wczytane pomyślnie:", state);
             render();
-            alert("Projekt wczytany pomyślnie! Liczba kondygnacji: " + state.floors.length);
+            alert(`SUKCES!\nWczytano ${state.floors.length} kondygnacji.\nŁącznie punktów: ${state.floors.reduce((a,b) => a + b.defects.length, 0)}`);
+            console.log("Zaimportowany obiekt:", state);
         } catch (err) {
-            console.error("Błąd wczytywania pliku JSON:", err);
-            alert("Błąd: Plik .json jest uszkodzony lub ma niewłaściwy format.");
+            console.error("Błąd krytyczny importu:", err);
+            alert("Błąd: Przeglądarka nie mogła przetworzyć tego pliku .json");
         }
     };
     reader.readAsText(file);
@@ -213,5 +228,6 @@ function render() {
 
 if(state.floors.length === 0) addFloor();
 render();
+
 
 
