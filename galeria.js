@@ -72,13 +72,15 @@ function importData(e) {
                 state.floors = [{
                     name: "RZUT GŁÓWNY",
                     plan: data.plan || data.mainImg || '',
-                    defects: rawPoints.map(d => ({
+                    // Poprawione mapowanie wewnątrz pętli .map() dla usterek
+                    defects: (f.defects || f.points || []).map(d => ({
                         x: parseFloat(d.x) || 0,
                         y: parseFloat(d.y) || 0,
                         desc: d.desc || d.description || '',
                         norm: d.norm || '',
                         status: d.status || 'to_discuss',
-                        img: d.img || d.photo || ''
+                        // Szukamy zdjęcia w każdym możliwym polu:
+                        img: d.img || d.photo || d.image || d.src || '' 
                     }))
                 }];
             }
@@ -298,4 +300,5 @@ function clearAllData() {
 }
 
 render();
+
 
